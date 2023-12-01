@@ -1,4 +1,4 @@
-from ufl import (FacetNormal, FiniteElement, Identity, TestFunction, TrialFunction, VectorElement,div, dot, ds, dx, inner, lhs, nabla_grad, rhs, sym)
+from ufl import (Identity, div, dot, ds, dx, inner, lhs, nabla_grad, rhs, sym)
 
 # Define strain-rate tensor
 def epsilon(u):
