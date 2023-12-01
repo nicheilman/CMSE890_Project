@@ -2,6 +2,7 @@ from mpi4py import MPI
 from petsc4py import PETSc
 import numpy as np
 import pyvista
+import BC
 #import gmsh
 
 from dolfinx.fem import Constant, Function, FunctionSpace, assemble_scalar, dirichletbc, form, locate_dofs_geometrical
@@ -32,6 +33,18 @@ v = TestFunction(V)
 p = TrialFunction(Q)
 q = TestFunction(Q)
 
+# Boundary Conditions
+wall_dofs = locate_dofs_geometrical(V, BC.walls)
+u_noslip = np.array((0,) * mesh.geometry.dim, dtype=PETSc.ScalarType)
+bc_noslip = dirichletbc(u_noslip, wall_dofs, V)
+
+inflow_dofs = locate_dofs_geometrical(Q, BC.inflow)
+bc_inflow = dirichletbc(PETSc.ScalarType(8), inflow_dofs, Q)
+
+outflow_dofs = locate_dofs_geometrical(Q, BC.outflow)
+bc_outflow = dirichletbc(PETSc.ScalarType(0), outflow_dofs, Q)
+bcu = [bc_noslip]
+bcp = [bc_inflow, bc_outflow]
 
 # I/O and Pathing
 from pathlib import Path
@@ -39,5 +52,7 @@ folder = Path("results")
 folder.mkdir(exist_ok=True, parents=True)
 vtx_mesh = VTXWriter(mesh.comm, folder / "mesh.bp", mesh, engine="BP4")
 vtx_mesh.write(t)
+
+
 
 
