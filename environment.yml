@@ -1,0 +1,9 @@
+channels:
+  - conda-forge
+dependencies:
+  - matplotlib
+  - petsc4py
+  - mpi4py
+  - numpy
+  - pyvista
+  - fenics-dolfinx
