@@ -3,6 +3,7 @@ from petsc4py import PETSc
 import numpy as np
 import pyvista
 import BC
+from fluids import epsilon, sigma
 #import gmsh
 
 from dolfinx.fem import Constant, Function, FunctionSpace, assemble_scalar, dirichletbc, form, locate_dofs_geometrical
@@ -30,6 +31,7 @@ Q = FunctionSpace(mesh, s_cg1)
 # Create the test and trial function
 u = TrialFunction(V)
 v = TestFunction(V)
+print(len(v))
 p = TrialFunction(Q)
 q = TestFunction(Q)
 
@@ -45,6 +47,28 @@ outflow_dofs = locate_dofs_geometrical(Q, BC.outflow)
 bc_outflow = dirichletbc(PETSc.ScalarType(0), outflow_dofs, Q)
 bcu = [bc_noslip]
 bcp = [bc_inflow, bc_outflow]
+
+# Defining Navier-Stokes 
+u_n = Function(V)
+u_n.name = "u_n"
+U = 0.5 * (u_n + u)
+n = FacetNormal(mesh)
+f = Constant(mesh, PETSc.ScalarType((0, 0, 0)))
+print(len(f))
+k = Constant(mesh, PETSc.ScalarType(dt))
+mu = Constant(mesh, PETSc.ScalarType(1))
+rho = Constant(mesh, PETSc.ScalarType(1))
+
+# Define the variational problem for the first step
+p_n = Function(Q)
+p_n.name = "p_n"
+F1 = rho * dot((u - u_n) / k, v) * dx
+F1 += rho * dot(dot(u_n, nabla_grad(u_n)), v) * dx
+F1 += inner(sigma(U, p_n, mu), epsilon(v)) * dx
+F1 += dot(p_n * n, v) * ds - dot(mu * nabla_grad(U) * n, v) * ds
+F1 -= dot(f, v) * dx
+a1 = form(lhs(F1))
+L1 = form(rhs(F1))
 
 # I/O and Pathing
 from pathlib import Path
