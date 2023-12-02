@@ -40,7 +40,7 @@ u_noslip = np.array((0,) * mesh.geometry.dim, dtype=PETSc.ScalarType)
 bc_noslip = dirichletbc(u_noslip, wall_dofs, V)
 
 inflow_dofs = locate_dofs_geometrical(Q, BC.inflow)
-bc_inflow = dirichletbc(PETSc.ScalarType(8), inflow_dofs, Q)
+bc_inflow = dirichletbc(PETSc.ScalarType(10), inflow_dofs, Q)
 
 outflow_dofs = locate_dofs_geometrical(Q, BC.outflow)
 bc_outflow = dirichletbc(PETSc.ScalarType(0), outflow_dofs, Q)
@@ -165,21 +165,20 @@ for i in range(num_steps):
     # Update variable with solution from this time step
     u_n.x.array[:] = u_.x.array[:]
     p_n.x.array[:] = p_.x.array[:]
-
-# Write solutions to file
+    # Write solutions to file
 vtx_u.write(t)
 vtx_p.write(t)
 
 
 # Close xmdf file
-vtx_u.close()
-vtx_p.close()
-b1.destroy()
-b2.destroy()
-b3.destroy()
-solver1.destroy()
-solver2.destroy()
-solver3.destroy()
+#vtx_u.close()
+#vtx_p.close()
+#b1.destroy()
+#b2.destroy()
+#b3.destroy()
+#solver1.destroy()
+#solver2.destroy()
+#solver3.destroy()
 
 
 
