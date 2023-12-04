@@ -6,4 +6,6 @@ dependencies:
   - mpi4py
   - numpy
   - pyvista
-  - fenics-dolfinx
+  - fenics-dolfinx=0.7.1
+  - paraview=5.11.1
+  - python-gmsh
