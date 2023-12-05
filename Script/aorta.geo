@@ -1,4 +1,4 @@
-
+SetFactory("OpenCASCADE");
 
 Point(1) = {2, 0, 0};
 Point(2) = {2, 0, 2};
@@ -18,11 +18,26 @@ Line(102) = {4, 5};
 Line(103) = {7, 8};
 BSpline(104) = {2, 3, 4};
 BSpline(105) = {5, 6, 7};
-Circle(106) = {9, 11, 1};
-Circle(107) = {8, 12, 10};
+Line(106) = {8, 12};
+Line(107) = {12, 11}; 
+Line(108) = {11, 1};
 
-Physical Curve("test") = {101, 102, 103, 104, 105, 106, 107};
+Curve Loop(110) = {101, 104, 102, 105, 103, 106, 107, 108};
+Plane Surface(201) = {110};
 
-lineVect1[] = Extrude{{0, 0, 1}, {0, 0, 0}, Pi/2}{101, 102, 103, 104, 105, 106, 107};
+//Physical Curve("test") = {101, 102, 103, 104, 105, 106, 107};
+
+lineVect1[] = Extrude{{0, 0, 1}, {0, 0, 0}, Pi/2}{Surface{201}; Recombine;};
+lineVect2[] = Extrude{{0, 0, 1}, {0, 0, 0}, Pi/2}{Surface{209}; Recombine;};
+lineVect3[] = Extrude{{0, 0, 1}, {0, 0, 0}, Pi/2}{Surface{217}; Recombine;};
+lineVect4[] = Extrude{{0, 0, 1}, {0, 0, 0}, Pi/2}{Surface{225}; Recombine;};
 
 
+//Line{101}; Line{102}; Line{103}; Line{104}; Line{105}; Line{106}; Line{107};};
+
+Physical Volume("Vol_1") = lineVect1[1];
+Physical Volume("Vol_2") = lineVect2[1];
+Physical Volume("Vol_3") = lineVect3[1];
+Physical Volume("Vol_4") = lineVect4[1];
+
+Coherence;
