@@ -4,22 +4,22 @@ import numpy as np
 import pyvista
 import BC
 from fluids import epsilon, sigma
-#import gmsh
 
-from dolfinx.fem import Constant, Function, FunctionSpace, assemble_scalar, dirichletbc, form, locate_dofs_geometrical
+from dolfinx.fem import Constant, Function, FunctionSpace, assemble_scalar, dirichletbc, form, locate_dofs_geometrical, locate_dofs_topological
 from dolfinx.fem.petsc import assemble_matrix, assemble_vector, apply_lifting, create_vector, set_bc
-from dolfinx.io import VTXWriter
+from dolfinx.io import VTXWriter, gmshio
 from dolfinx.mesh import create_unit_cube
 from dolfinx.plot import vtk_mesh
 from ufl import (FacetNormal, FiniteElement, Identity, TestFunction, TrialFunction, VectorElement,
                  div, dot, ds, dx, inner, lhs, nabla_grad, rhs, sym)
-
 # Spacetime discretization for meshing
 nx = 10
-mesh = create_unit_cube(MPI.COMM_WORLD, nx, nx, nx)
+mesh_comm = MPI.COMM_WORLD
+gmsh_model_rank = 0
+mesh, cell_markers, facet_markers = gmshio.read_from_msh("aorta_mesh.msh", mesh_comm, gmsh_model_rank, gdim=3)
 t = 0
-T = 10
-num_steps = 500
+T = 5/100
+num_steps = 5
 dt = T / num_steps
 
 # Define function spaces
@@ -34,8 +34,10 @@ v = TestFunction(V)
 p = TrialFunction(Q)
 q = TestFunction(Q)
 
+
 # Boundary Conditions
 wall_dofs = locate_dofs_geometrical(V, BC.walls)
+#wall_dofs = locate_dofs_topological(V, mesh.geometry.dim-1, 253)
 u_noslip = np.array((0,) * mesh.geometry.dim, dtype=PETSc.ScalarType)
 bc_noslip = dirichletbc(u_noslip, wall_dofs, V)
 
@@ -128,7 +130,6 @@ vtx_mesh.write(t)
 vtx_u.write(t)
 vtx_p.write(t)
 
-
 # Solver Loop 
 for i in range(num_steps):
     # Update current time step
@@ -165,10 +166,12 @@ for i in range(num_steps):
     # Update variable with solution from this time step
     u_n.x.array[:] = u_.x.array[:]
     p_n.x.array[:] = p_.x.array[:]
-    # Write solutions to file
+    
+    print(i/num_steps*100, "%")
+
+# Write solutions to file    
 vtx_u.write(t)
 vtx_p.write(t)
-
 
 # Close xmdf file
 #vtx_u.close()
