@@ -1,0 +1,32 @@
+# target OUTPUT files for the whole workflow
+rule all:
+    input:
+        "../results/video.ani",
+        "../results/scrshot.png"
+
+# workflow
+rule Mesh:
+    input:
+        "../Script/aorta.geo"
+    output:
+        "../Script/aorta_mesh.msh"
+    shell:
+        "python3 ../Script/geom.py"
+rule Flow:
+    input:
+        "../Script/aorta_mesh.msh"
+    output:
+        "../Script/results/u.bp",
+        "../Script/results/p.bp"
+    shell:
+        "python3 ../Script/flow.py"
+rule ParaView:
+    input:
+        "../Script/results/u.bp"
+    output:
+        "../results/video.ani",
+        "../results/scrshot.png"
+    shell:
+        "python3 ../Script/render.py"
+
+
