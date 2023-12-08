@@ -8,7 +8,7 @@ from fluids import epsilon, sigma
 from dolfinx.fem import Constant, Function, FunctionSpace, assemble_scalar, dirichletbc, form, locate_dofs_geometrical, locate_dofs_topological
 from dolfinx.fem.petsc import assemble_matrix, assemble_vector, apply_lifting, create_vector, set_bc
 from dolfinx.io import VTXWriter, gmshio
-from dolfinx.mesh import create_unit_cube
+from dolfinx.mesh import locate_entities_boundary
 from dolfinx.plot import vtk_mesh
 from ufl import (FacetNormal, FiniteElement, Identity, TestFunction, TrialFunction, VectorElement,
                  div, dot, ds, dx, inner, lhs, nabla_grad, rhs, sym)
@@ -18,8 +18,8 @@ mesh_comm = MPI.COMM_WORLD
 gmsh_model_rank = 0
 mesh, cell_markers, facet_markers = gmshio.read_from_msh("aorta_mesh.msh", mesh_comm, gmsh_model_rank, gdim=3)
 t = 0
-T = 5/100
-num_steps = 5
+T = 25/100
+num_steps = 25
 dt = T / num_steps
 
 # Define function spaces
@@ -36,18 +36,21 @@ q = TestFunction(Q)
 
 
 # Boundary Conditions
-wall_dofs = locate_dofs_geometrical(V, BC.walls)
-#wall_dofs = locate_dofs_topological(V, mesh.geometry.dim-1, 253)
+#wall_dofs = locate_dofs_geometrical(V, BC.walls)
+facetdim = mesh.topology.dim - 1
+bndry_facets = locate_entities_boundary(mesh, facetdim, BC.walls)
+wall_dofs = locate_dofs_topological(V, facetdim, bndry_facets)
 u_noslip = np.array((0,) * mesh.geometry.dim, dtype=PETSc.ScalarType)
 bc_noslip = dirichletbc(u_noslip, wall_dofs, V)
 
-inflow_dofs = locate_dofs_geometrical(Q, BC.inflow)
-bc_inflow = dirichletbc(PETSc.ScalarType(10), inflow_dofs, Q)
+inflow_dofs = locate_dofs_geometrical(V, BC.inflow)
+u_inflow = np.array((0, 0, 10), dtype=PETSc.ScalarType)
+bc_inflow = dirichletbc(u_inflow, inflow_dofs, V)
 
 outflow_dofs = locate_dofs_geometrical(Q, BC.outflow)
 bc_outflow = dirichletbc(PETSc.ScalarType(0), outflow_dofs, Q)
-bcu = [bc_noslip]
-bcp = [bc_inflow, bc_outflow]
+bcu = [bc_noslip, bc_inflow]
+bcp = [bc_outflow]
 
 # Defining Navier-Stokes variables 
 u_n = Function(V)
