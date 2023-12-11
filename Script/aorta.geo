@@ -1,20 +1,21 @@
 SetFactory("OpenCASCADE");
 
+lc = 0.15;
 r = 0.8;
 L = 10; 
 
-Point(1) = {r, 0, 0};
-Point(2) = {r, 0, 2};
-Point(3) = {3, 0, 2.5};
-Point(4) = {4, 0, 3};
-Point(5) = {4, 0, 5};
-Point(6) = {3, 0, 5.5};
-Point(7) = {r, 0, 6};
-Point(8) = {r, 0, L};
-Point(9) = {0, 2, 0};
-Point(10) = {4, 0, 4};
-Point(11) = {0, 0, 0};
-Point(12) = {0, 0, L};
+Point(1) = {r, 0, 0, lc};
+Point(2) = {r, 0, 2, lc};
+Point(3) = {3, 0, 2.5, lc};
+Point(4) = {4, 0, 3, lc};
+Point(5) = {4, 0, 5, lc};
+Point(6) = {3, 0, 5.5, lc};
+Point(7) = {r, 0, 6, lc};
+Point(8) = {r, 0, L, lc};
+Point(9) = {0, 2, 0, lc};
+Point(10) = {4, 0, 4, lc};
+Point(11) = {0, 0, 0, lc};
+Point(12) = {0, 0, L, lc};
 
 Line(101) = {1, 2};
 Line(102) = {4, 5};
@@ -37,6 +38,10 @@ lineVect4[] = Extrude{{0, 0, 1}, {0, 0, 0}, Pi/2}{Surface{222}; Recombine;};
 
 Surface Loop(250) = {lineVect1[5], lineVect2[5], lineVect3[5], lineVect4[5]};
 Surface Loop(251) = {lineVect1[7], lineVect2[7], lineVect3[7], lineVect4[7]};
+Surface Loop(253) = {lineVect1[2], lineVect1[3], lineVect1[4], lineVect1[5], 
+                     lineVect2[2], lineVect2[3], lineVect2[4], lineVect2[5], 
+                     lineVect3[2], lineVect3[3], lineVect3[4], lineVect3[5], 
+                     lineVect4[2], lineVect4[3], lineVect4[4], lineVect4[5]};
 
 Physical Surface("Inlet") = {250};
 Physical Surface("Outlet") = {251};
