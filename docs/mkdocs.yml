@@ -1,0 +1,12 @@
+site_name: CMSE890 Project Documentation
+site_url: https://CMSE890_Project.github.io
+nav:
+ - Home: index.md
+ - Tutorial: Tutorial.md
+ - How-To Guides: How-To.md
+ - Explanation: Explanation.md
+ - Reference: Reference.md
+theme: readthedocs
+
+
+
