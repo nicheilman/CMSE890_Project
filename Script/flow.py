@@ -3,32 +3,38 @@ from petsc4py import PETSc
 import numpy as np
 import pyvista
 import BC
-from fluids import epsilon, sigma
+from fluids import epsilon, sigma, Inflow, BackPressure
 
 from dolfinx.fem import Constant, Function, FunctionSpace, assemble_scalar, dirichletbc, form, locate_dofs_geometrical, locate_dofs_topological
 from dolfinx.fem.petsc import assemble_matrix, assemble_vector, apply_lifting, create_vector, set_bc
 from dolfinx.io import VTXWriter, gmshio
-from dolfinx.mesh import create_unit_cube
+from dolfinx.mesh import locate_entities_boundary
 from dolfinx.plot import vtk_mesh
 from ufl import (FacetNormal, FiniteElement, Identity, TestFunction, TrialFunction, VectorElement,
                  div, dot, ds, dx, inner, lhs, nabla_grad, rhs, sym)
+
 # Spacetime discretization for meshing
-nx = 10
+
+# Read in mesh file and distribute to MPI nodes
 mesh_comm = MPI.COMM_WORLD
 gmsh_model_rank = 0
-mesh, cell_markers, facet_markers = gmshio.read_from_msh("aorta_mesh.msh", mesh_comm, gmsh_model_rank, gdim=3)
-t = 0
-T = 5/100
-num_steps = 5
-dt = T / num_steps
+mesh, cell_markers, facet_markers = gmshio.read_from_msh("aorta_mesh_fine.msh", mesh_comm, gmsh_model_rank, gdim=3)
 
-# Define function spaces
+# Define timeline and time step size
+t = 0
+T = 10
+num_steps = 5000
+dt = T / num_steps # (s)
+
+# Define two function spaces
+# A quadratic space, V, for the velocity solver
+# A linear space, Q, for the pressure solver
 v_cg2 = VectorElement("Lagrange", mesh.ufl_cell(), 2)
 s_cg1 = FiniteElement("Lagrange", mesh.ufl_cell(), 1)
 V = FunctionSpace(mesh, v_cg2)
 Q = FunctionSpace(mesh, s_cg1)
 
-# Create the test and trial function
+# Create the test and trial functions
 u = TrialFunction(V)
 v = TestFunction(V)
 p = TrialFunction(Q)
@@ -36,28 +42,36 @@ q = TestFunction(Q)
 
 
 # Boundary Conditions
-wall_dofs = locate_dofs_geometrical(V, BC.walls)
-#wall_dofs = locate_dofs_topological(V, mesh.geometry.dim-1, 253)
-u_noslip = np.array((0,) * mesh.geometry.dim, dtype=PETSc.ScalarType)
+
+# Define no-slip condition on the walls of the vessel
+facetdim = mesh.topology.dim - 1
+bndry_facets = locate_entities_boundary(mesh, facetdim, BC.walls)
+wall_dofs = locate_dofs_topological(V, facetdim, bndry_facets)
+u_noslip = np.array((0,) * mesh.geometry.dim, dtype=PETSc.ScalarType) # (cm/s)
 bc_noslip = dirichletbc(u_noslip, wall_dofs, V)
 
-inflow_dofs = locate_dofs_geometrical(Q, BC.inflow)
-bc_inflow = dirichletbc(PETSc.ScalarType(10), inflow_dofs, Q)
+# Define the incoming blood flow velocity at the inlet
+inflow_dofs = locate_dofs_geometrical(V, BC.inflow)
+inflow_rate = Constant(mesh, Inflow(t))
+u_inflow = np.array((0, 0, inflow_rate), dtype=PETSc.ScalarType) # (cm/s)
+bc_inflow = dirichletbc(u_inflow, inflow_dofs, V)
+bcu = [bc_noslip, bc_inflow]
 
-outflow_dofs = locate_dofs_geometrical(Q, BC.outflow)
-bc_outflow = dirichletbc(PETSc.ScalarType(0), outflow_dofs, Q)
-bcu = [bc_noslip]
-bcp = [bc_inflow, bc_outflow]
+# Define the back pressure from the remaining veinous system at the outlet
+backpressure_dofs = locate_dofs_geometrical(Q, BC.outflow)
+backpressure_value = Constant(mesh, BackPressure(t))  # (Pa)
+bc_backpressure = dirichletbc(PETSc.ScalarType(backpressure_value), backpressure_dofs, Q) 
+bcp = [bc_backpressure]
 
 # Defining Navier-Stokes variables 
-u_n = Function(V)
+u_n = Function(V) 
 u_n.name = "u_n"
 U = 0.5 * (u_n + u)
-n = FacetNormal(mesh)
-f = Constant(mesh, PETSc.ScalarType((0, 0, 0)))
-k = Constant(mesh, PETSc.ScalarType(dt))
-mu = Constant(mesh, PETSc.ScalarType(1))
-rho = Constant(mesh, PETSc.ScalarType(1))
+n = FacetNormal(mesh) # Normal vector 
+f = Constant(mesh, PETSc.ScalarType((0, 0, 0))) # Forcing function
+k = Constant(mesh, PETSc.ScalarType(dt)) # Relaxation time (s)
+mu = Constant(mesh, PETSc.ScalarType(0.0044)) # Dynamic Viscosity (Pa s)
+rho = Constant(mesh, PETSc.ScalarType(1.050)) # Density (g/cm^3)
 
 # Define the variational problem for the step 1
 p_n = Function(Q)
@@ -123,14 +137,15 @@ pc3.setType(PETSc.PC.Type.SOR)
 from pathlib import Path
 folder = Path("results")
 folder.mkdir(exist_ok=True, parents=True)
-vtx_mesh = VTXWriter(mesh.comm, folder / "mesh.bp", mesh, engine="BP4")
+#vtx_mesh = VTXWriter(mesh.comm, folder / "mesh.bp", mesh, engine="BP4")
 vtx_u = VTXWriter(mesh.comm, folder / "u.bp", u_n, engine="BP4")
 vtx_p = VTXWriter(mesh.comm, folder / "p.bp", p_n, engine="BP4")
-vtx_mesh.write(t)
+#vtx_mesh.write(t)
 vtx_u.write(t)
 vtx_p.write(t)
 
-# Solver Loop 
+# Solver Loop
+print("Solving in progress...") 
 for i in range(num_steps):
     # Update current time step
     t += dt
@@ -166,12 +181,24 @@ for i in range(num_steps):
     # Update variable with solution from this time step
     u_n.x.array[:] = u_.x.array[:]
     p_n.x.array[:] = p_.x.array[:]
-    
+
+    # Update the temporal boundary conditions
+    inflow_rate.value = Inflow(t)
+    u_inflow = np.array((0, 0, inflow_rate), dtype=PETSc.ScalarType)
+    bc_inflow = dirichletbc(u_inflow, inflow_dofs, V)
+    bcu = [bc_noslip, bc_inflow]
+
+    backpressure_value.value = BackPressure(t)
+    bc_backpressure = dirichletbc(PETSc.ScalarType(backpressure_value), backpressure_dofs, Q)
+    bcp = [bc_backpressure]
+
+ 
     print(i/num_steps*100, "%")
 
-# Write solutions to file    
-vtx_u.write(t)
-vtx_p.write(t)
+    # Write solutions to file    
+    if (t >= 8) and ((i+1) % 50 == 0) :
+        vtx_u.write(t)
+        vtx_p.write(t)
 
 # Close xmdf file
 #vtx_u.close()

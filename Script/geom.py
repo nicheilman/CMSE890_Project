@@ -9,8 +9,8 @@ gmsh.model.add("aorta")
 gmsh.open("aorta.geo")
 
 gmsh.model.mesh.generate(3)
-gmsh.model.mesh.refine()
-gmsh.write("aorta_mesh.msh")
+#gmsh.model.mesh.refine()
+gmsh.write("aorta_mesh_fine.msh")
 
 gmsh_model_rank = 0
 mesh_comm = MPI.COMM_WORLD
