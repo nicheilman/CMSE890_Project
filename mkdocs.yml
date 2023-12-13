@@ -1,0 +1,8 @@
+site_name: CMSE890 Project Documentation
+nav:
+ - Home: index.md
+ - Tutorial: Tutorial.md
+ - How-To Guides: How-To.md
+ - Explanation: Explanation.md
+ - Reference: Reference.md
+theme: readthedocs
