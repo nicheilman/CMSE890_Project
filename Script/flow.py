@@ -22,8 +22,8 @@ mesh, cell_markers, facet_markers = gmshio.read_from_msh("aorta_mesh_fine.msh", 
 
 # Define timeline and time step size
 t = 0
-T = 10
-num_steps = 5000
+T = 6
+num_steps = 3000
 dt = T / num_steps # (s)
 
 # Define two function spaces
@@ -196,7 +196,7 @@ for i in range(num_steps):
     print(i/num_steps*100, "%")
 
     # Write solutions to file    
-    if (t >= 8) and ((i+1) % 50 == 0) :
+    if (t >= 4) and ((i+1) % 10 == 0) :
         vtx_u.write(t)
         vtx_p.write(t)
 

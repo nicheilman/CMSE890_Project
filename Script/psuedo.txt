@@ -1,0 +1,135 @@
+GEOMETRY/MESH GENERATION 
+
+Init a gmsh space
+Create a new model -> name = "aorta"
+Open the geometry file and read
+
+Generate a mesh (dimension = 3)
+Write mesh to file -> name = "aorta_mesh.msh"
+
+----------------------------------------------
+FLOW CALCULATION
+
+*Discrete Space*
+Read in the mesh
+
+Define start time
+Define end time
+Define number of steps
+Calculate time step size
+
+*Function Space*
+Create finite element space for velocity (lagrange, quad)
+Create finite element space for pressure (lagrange, line)
+
+Create trial and test function for both spaces (4 total)
+
+
+*Boundary Conditions*
+(No-slip)
+No-Slip Velocity = (0,0,0)
+Identify wall boundaries using mesh boundary function
+Locate DOFs from the boundary elements
+Implement Dirchlet BC -> No Slip Velocity on Wall DOFs
+
+(Incoming Blood Flow) 
+v(t) = (sin(2*pi*t) - cos(4*pi*t) + 1) (Approx. flow pattern)
+Identify inlet boundary using geometry boundary function (z=10)
+Locate DOFs from the boundary elements
+Implement Dirchlet BC -> v(t) on Inlet DOFs
+
+(Outlet Backpressure)
+p(t) = (sin(2*pi*x)^2 + sin(2*pi*(x - 0.125)))
+Identify outlet boundary using geometry boundary function (z=0)
+Locate DOFs from the boundary elements
+Implement Dirchlet BC -> v(t) on Inlet DOFs
+
+
+* Navier-Stokes* 
+Define constant values:
+|_ (Vector normals, Forcing function, relaxation time, viscosity, density)
+
+(Step 1)
+rho * dot((u - u_n) / k, v) * dx
++ rho * dot(dot(u_n, nabla_grad(u_n)), v) * dx
++ inner(sigma(U, p_n, mu), epsilon(v)) * dx
++ dot(p_n * n, v) * ds - dot(mu * nabla_grad(U) * n, v) * ds
+- dot(f, v) * dx
+Take a(u,v) as left hand side
+Take L(v) as right hand side
+
+(Step 2)
+dot(nabla_grad(p), nabla_grad(q)) * dx
++ dot(nabla_grad(p_n), nabla_grad(q)) * dx - (rho / k) * div(u_) * q * dx
+Take a(u,v) as left hand side
+Take L(v) as right hand side
+
+(Step 3)
+rho * dot(u, v) * dx
++ rho * dot(u_, v) * dx - k * dot(nabla_grad(p_ - p_n), v) * dx
+Take a(u,v) as left hand side
+Take L(v) as right hand side
+
+
+*Linear System Solver*
+(Step 1) 
+Create Solver1 on mesh
+Set solver type to BCGS
+Set preconditioner to boomerang
+
+(Step 2) 
+Create Solver2 on mesh
+Set solver type to BCGS
+Set preconditioner to boomerang
+
+(Step 3) 
+Create Solver3 on mesh
+Set solver type to CG
+Set preconditioner to SOR
+
+for i in range of number of timesteps {
+Update time
+
+Run Solver1
+Update Velocity
+
+Run Solver2 
+Update Pressure
+
+Run Solver3
+Update Velocity and Pressure
+
+Update Inflow and Backpressure Values
+Update the boundary conditions
+
+Write u to vtk file
+Write p to vtk file
+}
+
+----------------------------------------------------
+
+RENDER VISUALIZATION
+
+Create VTXReader
+
+Get animation scene
+Get the time-keeper
+
+Update animation scene for time steps
+
+Get active view
+
+Set defaults for the display properties
+
+Get 2D transfer function for 'u_n'
+u_nTF2D = GetTransferFunction2D('u_n')
+
+Set representation type = 'Outline'
+
+Create a new Glyph for u_n
+Set glyph to be arrow 
+
+Show data in view
+
+Save animation
+

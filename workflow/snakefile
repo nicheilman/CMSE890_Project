@@ -1,8 +1,8 @@
 # target OUTPUT files for the whole workflow
 rule all:
     input:
-        "../results/video.ani",
-        "../results/scrshot.png"
+        "../Script/results/video.ani",
+        "../Script/results/scrshot.png"
 
 # workflow
 rule Mesh:
