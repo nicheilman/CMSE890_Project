@@ -2,7 +2,10 @@
 rule all:
     input:
         "../Script/results/video.ani",
-        "../Script/results/scrshot.png"
+        "../Script/results/scrshot.png",
+        "../Script/aorta_mesh.msh",
+        "../Script/results/u.bp",
+        "../Script/results/p.bp"
 
 # workflow
 rule Mesh:
@@ -24,7 +27,7 @@ rule ParaView:
     input:
         "../Script/results/u.bp"
     output:
-        "../results/video.ani",
-        "../results/scrshot.png"
+        "../Script/results/video.ani",
+        "../Script/results/scrshot.png"
     shell:
         "python3 ../Script/render.py"
